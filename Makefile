@@ -12,10 +12,10 @@ install:
 
 dev:
 	@echo "Starting backend and frontend..."
-	@$(MAKE) backend &
-	@cd $(FRONTEND_DIR) && npm run dev &
-	@sleep 2 && open http://localhost:5173 || xdg-open http://localhost:5173 || true
-	@wait
+	@bash -c 'PYTHONPATH=. uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000 & \
+	  cd frontend && npm run dev & \
+	  sleep 2 && (open http://localhost:5173 2>/dev/null || xdg-open http://localhost:5173 2>/dev/null || true); \
+	  wait'
 
 backend:
 	PYTHONPATH=. $(UVICORN) backend.main:app --reload --host 0.0.0.0 --port 8000
