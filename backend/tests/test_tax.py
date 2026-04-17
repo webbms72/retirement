@@ -5,7 +5,6 @@ from __future__ import annotations
 import pytest
 
 from backend.engines.tax import (
-    TaxInput,
     calculate_delaware_tax,
     calculate_federal_ordinary_income_tax,
 )
@@ -260,3 +259,149 @@ def test_de_single_filer():
         retirement_income_spouse=0.0,
     )
     assert result == pytest.approx(956.28, abs=2.0)
+
+
+# ── SS Inclusion Tests (Task 6) ───────────────────────────────────────────────
+
+
+def test_ss_inclusion_below_base_threshold():
+    """Combined income below $32k MFJ → 0% SS included."""
+    from backend.engines.tax import calculate_ss_inclusion
+
+    # Combined income = other_income + (ss_gross / 2)
+    # SS = $24,000/yr; other_income = $18,000 → combined = $18,000 + $12,000 = $30,000 < $32,000
+    result = calculate_ss_inclusion(
+        ss_gross=24_000.0, other_income=18_000.0, filing_status="mfj"
+    )
+    assert result == 0.0
+
+
+def test_ss_inclusion_middle_tier_mfj():
+    """Combined income between $32k–$44k MFJ → 50% rule applies."""
+    from backend.engines.tax import calculate_ss_inclusion
+
+    # SS = $20,000; other = $24,000 → combined = $24,000 + $10,000 = $34,000
+    # In middle tier: taxable SS = min(0.50 * SS, 0.50 * (combined - $32,000))
+    # = min($10,000, 0.50 * $2,000) = min($10,000, $1,000) = $1,000
+    result = calculate_ss_inclusion(
+        ss_gross=20_000.0, other_income=24_000.0, filing_status="mfj"
+    )
+    assert result == pytest.approx(1_000.0, abs=1.0)
+
+
+def test_ss_inclusion_above_upper_threshold_mfj():
+    """Combined income above $44k MFJ → up to 85% SS included."""
+    from backend.engines.tax import calculate_ss_inclusion
+
+    # SS = $36,000/yr; other_income = $60,000 → combined = $60,000 + $18,000 = $78,000
+    # Above $44k → 85% of SS = $30,600
+    result = calculate_ss_inclusion(
+        ss_gross=36_000.0, other_income=60_000.0, filing_status="mfj"
+    )
+    assert result == pytest.approx(30_600.0, abs=1.0)
+
+
+# ── LTCG Rate Tests ───────────────────────────────────────────────────────────
+
+
+def test_ltcg_0pct_within_threshold():
+    """MFJ ordinary income $50,000 + LTCG $20,000 — LTCG at 0% (below $94,050 threshold)."""
+    from backend.engines.tax import calculate_ltcg_tax
+
+    result = calculate_ltcg_tax(
+        ltcg_income=20_000.0, ordinary_taxable_income=50_000.0, filing_status="mfj"
+    )
+    assert result == 0.0
+
+
+def test_ltcg_partially_in_15pct():
+    """MFJ ordinary income $80,000 + LTCG $30,000 — LTCG straddles 0%/15% threshold.
+
+    0% threshold for MFJ 2024: $94,050
+    Income already using: $80,000 ordinary
+    Room in 0% band: $94,050 - $80,000 = $14,050 at 0%
+    Remaining LTCG: $30,000 - $14,050 = $15,950 at 15%
+    Tax: $15,950 * 0.15 = $2,392.50
+    """
+    from backend.engines.tax import calculate_ltcg_tax
+
+    result = calculate_ltcg_tax(
+        ltcg_income=30_000.0, ordinary_taxable_income=80_000.0, filing_status="mfj"
+    )
+    assert result == pytest.approx(2_392.50, abs=1.0)
+
+
+def test_ltcg_20pct_threshold():
+    """MFJ ordinary income $560,000 + LTCG $30,000 — straddles 15%/20% threshold.
+    15%/20% threshold: $583,750
+    ordinary = $560k; LTCG starts at $560k
+    First $23,750 of LTCG ($560k→$583,750) at 15%: $23,750 * 0.15 = $3,562.50
+    Remaining $6,250 at 20%: $6,250 * 0.20 = $1,250.00
+    Total: $4,812.50
+    """
+    from backend.engines.tax import calculate_ltcg_tax
+
+    result = calculate_ltcg_tax(
+        ltcg_income=30_000.0, ordinary_taxable_income=560_000.0, filing_status="mfj"
+    )
+    assert result == pytest.approx(4_812.50, abs=1.0)
+
+
+# ── IRMAA Tests ───────────────────────────────────────────────────────────────
+
+
+def test_irmaa_below_threshold():
+    """Prior-year MAGI $200,000 MFJ → no IRMAA."""
+    from backend.engines.tax import calculate_irmaa_annual
+
+    result = calculate_irmaa_annual(prior_year_magi=200_000.0, filing_status="mfj")
+    assert result == 0.0
+
+
+def test_irmaa_tier_1_mfj():
+    """Prior-year MAGI $230,000 MFJ → Tier 1: $69.90/month * 2 people * 12."""
+    from backend.engines.tax import calculate_irmaa_annual
+
+    result = calculate_irmaa_annual(prior_year_magi=230_000.0, filing_status="mfj")
+    assert result == pytest.approx(69.90 * 2 * 12, abs=1.0)
+
+
+def test_irmaa_tier_3_mfj():
+    """Prior-year MAGI $340,000 MFJ → Tier 3: $279.50/month * 2 people * 12."""
+    from backend.engines.tax import calculate_irmaa_annual
+
+    result = calculate_irmaa_annual(prior_year_magi=340_000.0, filing_status="mfj")
+    assert result == pytest.approx(279.50 * 2 * 12, abs=1.0)
+
+
+# ── calculate_taxes() integration test ───────────────────────────────────────
+
+
+def test_calculate_taxes_full_mfj():
+    """Full integration: MFJ couple, age 62/60, moderate retirement income."""
+    from backend.engines.tax import TaxInput, calculate_taxes
+
+    ti = TaxInput(
+        filing_status="mfj",
+        age_you=62,
+        age_spouse=60,
+        ordinary_income=80_000.0,
+        ss_income_you=37_200.0,
+        ss_income_spouse=0.0,
+        ltcg_income=10_000.0,
+        roth_conversion=0.0,
+        retirement_income_you=80_000.0,
+        retirement_income_spouse=0.0,
+        prior_year_magi=100_000.0,
+        inflation_factor=1.0,
+    )
+    result = calculate_taxes(ti)
+
+    assert result.federal_total > 0
+    assert result.state_tax > 0
+    assert result.total_tax == pytest.approx(
+        result.federal_total + result.state_tax, abs=1.0
+    )
+    assert 0.0 < result.effective_rate < 0.30
+    assert result.federal_ss_included > 0
+    assert result.irmaa_annual == 0.0  # below IRMAA threshold
