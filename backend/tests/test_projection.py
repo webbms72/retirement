@@ -302,8 +302,11 @@ def test_run_projection_ss_increases_portfolio_stability():
     params_early_ss = _make_scenario(ss_claim_age_you=62, ss_claim_age_spouse=62)
     params_late_ss = _make_scenario(ss_claim_age_you=70, ss_claim_age_spouse=70)
 
-    accounts_early = _make_accounts(k401=400_000.0, roth=80_000.0)
-    accounts_late = _make_accounts(k401=400_000.0, roth=80_000.0)
+    # Accounts large enough that the portfolio survives to age 68 in both scenarios,
+    # so the SS timing difference is measurable (inflation-adjusted spending ~$210k/yr
+    # by year 14 means small accounts deplete well before age 62 SS kicks in).
+    accounts_early = _make_accounts(k401=2_500_000.0, roth=300_000.0)
+    accounts_late = _make_accounts(k401=2_500_000.0, roth=300_000.0)
 
     results_early = run_projection(2026, 54, 52, accounts_early, params_early_ss)
     results_late = run_projection(2026, 54, 52, accounts_late, params_late_ss)
