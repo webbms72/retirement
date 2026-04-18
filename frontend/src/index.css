@@ -1,0 +1,192 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg-primary: #0d1b2a;
+  --bg-card: #0f3460;
+  --bg-surface: #16213e;
+  --text-primary: #e0e0e0;
+  --text-muted: #90a4ae;
+  --accent: #4fc3f7;
+  --accent-hover: #81d4fa;
+  --success: #81c784;
+  --warning: #ffb74d;
+  --danger: #ef5350;
+  --border: #1e3a5f;
+  --radius: 8px;
+  --font: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+input, select, textarea {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 14px;
+  padding: 6px 10px;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--accent);
+}
+
+input[type="range"] {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+button {
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius);
+  color: #0d1b2a;
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  transition: background 0.15s;
+}
+
+button:hover { background: var(--accent-hover); }
+
+button.secondary {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+}
+
+button.secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+button.danger { background: var(--danger); color: #fff; }
+button.danger:hover { background: #c62828; }
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.tab-bar {
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 4px;
+  padding: 8px 24px 0;
+}
+
+.tab-bar button {
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 16px 10px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.tab-bar button:hover { background: transparent; color: var(--text-primary); }
+.tab-bar button.active { border-bottom-color: var(--accent); color: var(--accent); }
+
+.tab-content { padding: 24px; }
+
+label {
+  color: var(--text-muted);
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.field { margin-bottom: 14px; }
+
+.badge {
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  text-transform: uppercase;
+}
+
+table { border-collapse: collapse; width: 100%; }
+
+th {
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: 8px 10px;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+td { border-bottom: 1px solid #1a2a3a; padding: 8px 10px; }
+tr:last-child td { border-bottom: none; }
+
+.metric-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  text-align: center;
+}
+
+.metric-card .metric-value {
+  color: var(--accent);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.metric-card .metric-label {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+
+.section-title {
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  margin-bottom: 14px;
+  padding-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.two-col { display: grid; gap: 24px; grid-template-columns: 1fr 1fr; }
+.three-col { display: grid; gap: 16px; grid-template-columns: 1fr 1fr 1fr; }
+.four-col { display: grid; gap: 16px; grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+@media (max-width: 900px) {
+  .two-col, .three-col, .four-col { grid-template-columns: 1fr; }
+}
