@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-import pytest
-
 from backend.engines.ss_optimizer import (
     SSInput,
-    SSClaimResult,
     optimize_ss,
 )
 
