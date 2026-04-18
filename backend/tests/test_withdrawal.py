@@ -7,7 +7,6 @@ import pytest
 from backend.engines.withdrawal import (
     AccountState,
     WithdrawalInput,
-    WithdrawalResult,
     optimize_withdrawals,
 )
 

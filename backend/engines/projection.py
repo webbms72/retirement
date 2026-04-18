@@ -7,7 +7,7 @@ the Tax Engine and Withdrawal Optimizer on a year-by-year basis.
 from __future__ import annotations
 
 import copy
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from backend.engines.tax import TaxInput, TaxResult, calculate_taxes
@@ -17,7 +17,6 @@ from backend.engines.withdrawal import (
     WithdrawalResult,
     calculate_rmd,
     optimize_withdrawals,
-    RMD_MIN_AGE,
 )
 
 
