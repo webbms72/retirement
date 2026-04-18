@@ -11,11 +11,11 @@ install:
 	cd $(FRONTEND_DIR) && npm install
 
 dev:
-	@echo "Starting backend and frontend..."
-	@bash -c 'PYTHONPATH=. uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000 & \
-	  cd frontend && npm run dev & \
-	  sleep 2 && (open http://localhost:5173 2>/dev/null || xdg-open http://localhost:5173 2>/dev/null || true); \
-	  wait'
+	cd $(FRONTEND_DIR) && npx concurrently \
+		--names "backend,frontend" \
+		--prefix-colors "cyan,magenta" \
+		"cd .. && PYTHONPATH=. $(UVICORN) backend.main:app --reload --host 0.0.0.0 --port 8000" \
+		"npm run dev"
 
 backend:
 	PYTHONPATH=. $(UVICORN) backend.main:app --reload --host 0.0.0.0 --port 8000
