@@ -51,7 +51,7 @@ export default function ResultsTab() {
   if (error) return <div style={{ color: '#ef5350' }}>Error: {error}</div>;
 
   const selectedScenario = scenarios.find(s => s.id === selectedId);
-  const rows = projection?.rows ?? [];
+  const rows = projection?.years ?? [];
 
   // Compute key metrics
   const retirementRow = rows.find(r => r.age_you === selectedScenario?.retirement_age_you);
@@ -60,9 +60,9 @@ export default function ResultsTab() {
   const depletionRow = rows.find(r => r.portfolio_balance <= 0);
   const depletionAge = depletionRow ? depletionRow.age_you : null;
 
-  const taxRows = rows.filter(r => r.effective_tax_rate != null);
+  const taxRows = rows.filter(r => r.effective_rate != null);
   const avgEffectiveRate = taxRows.length > 0
-    ? taxRows.reduce((sum, r) => sum + (r.effective_tax_rate || 0), 0) / taxRows.length
+    ? taxRows.reduce((sum, r) => sum + (r.effective_rate || 0), 0) / taxRows.length
     : null;
 
   const lastRow = rows[rows.length - 1];

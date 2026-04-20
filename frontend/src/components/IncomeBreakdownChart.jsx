@@ -36,16 +36,16 @@ export default function IncomeBreakdownChart({ data }) {
         bucketMap[key] = { label: key, count: 0 };
         for (const s of SOURCES) bucketMap[key][s.key] = 0;
       }
+      const src = row.income_by_source || {};
       bucketMap[key].count++;
-      // SS = ss_you + ss_spouse
-      bucketMap[key].ss += (row.ss_you || 0) + (row.ss_spouse || 0);
-      bucketMap[key]['401k_withdrawal'] += row['401k_withdrawal'] || 0;
-      bucketMap[key].roth_withdrawal += row.roth_withdrawal || 0;
-      bucketMap[key].brokerage_withdrawal += row.brokerage_withdrawal || 0;
-      bucketMap[key].nqdc += row.nqdc || 0;
-      bucketMap[key].pension += row.pension || 0;
-      bucketMap[key].rental += row.rental || 0;
-      bucketMap[key].rmd += row.rmd || 0;
+      bucketMap[key].ss += (src.ss_you || 0) + (src.ss_spouse || 0);
+      bucketMap[key]['401k_withdrawal'] += src['401k_withdrawal'] || 0;
+      bucketMap[key].roth_withdrawal += src.roth_withdrawal || 0;
+      bucketMap[key].brokerage_withdrawal += src.brokerage_withdrawal || 0;
+      bucketMap[key].nqdc += src.nqdc || 0;
+      bucketMap[key].pension += src.pension || 0;
+      bucketMap[key].rental += src.rental || 0;
+      bucketMap[key].rmd += src.rmd || 0;
     }
 
     // Average within each bucket

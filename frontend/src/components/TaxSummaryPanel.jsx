@@ -1,14 +1,16 @@
 import React, { useState, useMemo } from 'react';
 
+const src = (r, key) => (r.income_by_source?.[key] || 0);
+
 const INCOME_SOURCES = [
-  { key: 'ss', label: 'Social Security', compute: r => (r.ss_you || 0) + (r.ss_spouse || 0) },
-  { key: '401k_withdrawal', label: '401(k)', compute: r => r['401k_withdrawal'] || 0 },
-  { key: 'roth_withdrawal', label: 'Roth', compute: r => r.roth_withdrawal || 0 },
-  { key: 'brokerage_withdrawal', label: 'Brokerage', compute: r => r.brokerage_withdrawal || 0 },
-  { key: 'nqdc', label: 'NQDC', compute: r => r.nqdc || 0 },
-  { key: 'pension', label: 'Pension', compute: r => r.pension || 0 },
-  { key: 'rental', label: 'Rental', compute: r => r.rental || 0 },
-  { key: 'rmd', label: 'RMD', compute: r => r.rmd || 0 },
+  { key: 'ss', label: 'Social Security', compute: r => src(r, 'ss_you') + src(r, 'ss_spouse') },
+  { key: '401k_withdrawal', label: '401(k)', compute: r => src(r, '401k_withdrawal') },
+  { key: 'roth_withdrawal', label: 'Roth', compute: r => src(r, 'roth_withdrawal') },
+  { key: 'brokerage_withdrawal', label: 'Brokerage', compute: r => src(r, 'brokerage_withdrawal') },
+  { key: 'nqdc', label: 'NQDC', compute: r => src(r, 'nqdc') },
+  { key: 'pension', label: 'Pension', compute: r => src(r, 'pension') },
+  { key: 'rental', label: 'Rental', compute: r => src(r, 'rental') },
+  { key: 'rmd', label: 'RMD', compute: r => src(r, 'rmd') },
 ];
 
 function fmtDollar(v) {
@@ -34,13 +36,13 @@ function PhaseCard({ title, rows }) {
 
   const avgFederal = avg(rows, r => r.federal_tax || 0);
   const avgState = avg(rows, r => r.state_tax || 0);
-  const avgEffRate = avg(rows, r => r.effective_tax_rate || 0);
+  const avgEffRate = avg(rows, r => r.effective_rate || 0);
 
   const notes = useMemo(() => {
     const seen = new Set();
     const result = [];
     for (const r of rows) {
-      const rowNotes = r.optimizer_notes || [];
+      const rowNotes = r.withdrawal_notes || [];
       for (const n of rowNotes) {
         if (!seen.has(n)) { seen.add(n); result.push(n); }
       }
