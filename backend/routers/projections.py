@@ -148,6 +148,7 @@ def _build_scenario_params(
                 is_rule_of_55_eligible=(
                     acct.account_type == "401k" and is_rule_of_55 and owner == "you"
                 ),
+                annual_contribution=float(acct.annual_contribution or 0),
             )
         )
 

@@ -167,6 +167,12 @@ def project_one_year(
         if acct.account_type not in ("nqdc", "pension", "real_estate"):
             acct.balance = acct.balance * (1.0 + blended)
 
+    # 1b. Add annual contributions (pre-retirement only)
+    if is_retired_you is False:
+        for acct in accounts:
+            if acct.account_type not in ("nqdc", "pension", "real_estate"):
+                acct.balance += acct.annual_contribution
+
     # 2. NQDC payout
     nqdc_income = _get_nqdc_payout(year, params)
 
@@ -183,12 +189,14 @@ def project_one_year(
         age_you, age_spouse, params, inflation
     )
 
-    # 6. Spending
-    spending = _get_spending(age_you, params, inflation)
+    # 6. Spending — zero before retirement (salary covers living expenses)
+    spending = _get_spending(age_you, params, inflation) if is_retired_you else 0.0
 
-    # 7. Healthcare cost (pre-Medicare only)
+    # 7. Healthcare cost — only post-retirement pre-Medicare (employer covers it before)
     healthcare_annual = (
-        params.healthcare_monthly_pre_medicare * 12 * inflation if age_you < 65 else 0.0
+        params.healthcare_monthly_pre_medicare * 12 * inflation
+        if (is_retired_you and age_you < 65)
+        else 0.0
     )
 
     # 8. RMDs (mandatory)

@@ -17,6 +17,7 @@ class AccountState:
     basis: float
     owner: str
     is_rule_of_55_eligible: bool = False
+    annual_contribution: float = 0.0
     roth_conversion_cohorts: dict[int, float] = field(default_factory=dict)
 
 
