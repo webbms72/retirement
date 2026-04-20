@@ -29,6 +29,9 @@ backend: $(VENV)/bin/activate
 frontend:
 	cd $(FRONTEND_DIR) && npm run dev
 
+db-clear-cache: $(VENV)/bin/activate
+	PYTHONPATH=. $(PYTHON) -c "from backend.database import SessionLocal; from backend.models import Projection, MCResult; db=SessionLocal(); db.query(Projection).delete(); db.query(MCResult).delete(); db.commit(); print('Cache cleared.')"
+
 db-reset: $(VENV)/bin/activate
 	PYTHONPATH=. $(PYTHON) -c "from backend.database import reset_db; reset_db()"
 	@echo "Database reset complete."
