@@ -167,11 +167,14 @@ def project_one_year(
         if acct.account_type not in ("nqdc", "pension", "real_estate"):
             acct.balance = acct.balance * (1.0 + blended)
 
-    # 1b. Add annual contributions (pre-retirement only)
-    if is_retired_you is False:
-        for acct in accounts:
-            if acct.account_type not in ("nqdc", "pension", "real_estate"):
-                acct.balance += acct.annual_contribution
+    # 1b. Add annual contributions — per person, stops at their own retirement
+    for acct in accounts:
+        if acct.account_type in ("nqdc", "pension", "real_estate"):
+            continue
+        if acct.owner == "you" and not is_retired_you:
+            acct.balance += acct.annual_contribution
+        elif acct.owner == "spouse" and not is_retired_spouse:
+            acct.balance += acct.annual_contribution
 
     # 2. NQDC payout
     nqdc_income = _get_nqdc_payout(year, params)
@@ -189,13 +192,17 @@ def project_one_year(
         age_you, age_spouse, params, inflation
     )
 
-    # 6. Spending — zero before retirement (salary covers living expenses)
-    spending = _get_spending(age_you, params, inflation) if is_retired_you else 0.0
+    # 6. Spending — household spending starts when either spouse retires
+    either_retired = is_retired_you or is_retired_spouse
+    spending = _get_spending(age_you, params, inflation) if either_retired else 0.0
 
-    # 7. Healthcare cost — only post-retirement pre-Medicare (employer covers it before)
+    # 7. Healthcare — needed when either person is retired and under 65
+    needs_healthcare = (is_retired_you and age_you < 65) or (
+        is_retired_spouse and age_spouse > 0 and age_spouse < 65
+    )
     healthcare_annual = (
         params.healthcare_monthly_pre_medicare * 12 * inflation
-        if (is_retired_you and age_you < 65)
+        if needs_healthcare
         else 0.0
     )
 
