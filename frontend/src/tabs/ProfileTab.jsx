@@ -139,12 +139,11 @@ export default function ProfileTab() {
           {profiles.map(person => (
             <PersonCard key={person.id} person={person} ss={ssData[person.id]}
               onPersonChange={(id, patch) => {
-                setProfiles(prev => prev.map(p => {
-                  if (p.id !== id) return p;
-                  const merged = { ...p, ...patch };
-                  debouncedUpdateProfile(id, merged);
-                  return merged;
-                }));
+                const current = profiles.find(p => p.id === id);
+                if (!current) return;
+                const merged = { ...current, ...patch };
+                setProfiles(prev => prev.map(p => p.id === id ? merged : p));
+                debouncedUpdateProfile(id, merged);
               }}
               onSsChange={(profileId, patch) => {
                 setSsData(prev => ({ ...prev, [profileId]: { ...prev[profileId], ...patch } }));
