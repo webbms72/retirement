@@ -44,25 +44,24 @@ export default function SSStrategyTable({ scenario }) {
           return;
         }
 
-        // Build params for the SS optimizer endpoint
-        const params = {};
-        if (youSS) {
-          params.benefit_at_62_you = youSS.benefit_at_62;
-          params.benefit_at_fra_you = youSS.benefit_at_fra;
-          params.benefit_at_70_you = youSS.benefit_at_70;
-          params.fra_age_you = youSS.fra_age;
-          params.survivor_benefit_pct = youSS.survivor_benefit_pct;
-        }
-        if (spouseSS) {
-          params.benefit_at_62_spouse = spouseSS.benefit_at_62;
-          params.benefit_at_fra_spouse = spouseSS.benefit_at_fra;
-          params.benefit_at_70_spouse = spouseSS.benefit_at_70;
-          params.fra_age_spouse = spouseSS.fra_age;
-        }
-        if (youProfile?.dob) params.dob_you = youProfile.dob;
-        if (spouseProfile?.dob) params.dob_spouse = spouseProfile.dob;
-        if (youProfile?.life_expectancy_age) params.life_expectancy_you = youProfile.life_expectancy_age;
-        if (spouseProfile?.life_expectancy_age) params.life_expectancy_spouse = spouseProfile.life_expectancy_age;
+        // Build params matching backend query param names exactly
+        const calcAge = dob => dob ? new Date().getFullYear() - parseInt(dob.slice(0, 4), 10) : 54;
+
+        const params = {
+          benefit_62_you:   youSS?.benefit_at_62  ?? 0,
+          benefit_fra_you:  youSS?.benefit_at_fra  ?? 0,
+          benefit_70_you:   youSS?.benefit_at_70   ?? 0,
+          fra_age_you:      youSS?.fra_age         ?? 67,
+          benefit_62_spouse:  spouseSS?.benefit_at_62  ?? 0,
+          benefit_fra_spouse: spouseSS?.benefit_at_fra  ?? 0,
+          benefit_70_spouse:  spouseSS?.benefit_at_70   ?? 0,
+          fra_age_spouse:     spouseSS?.fra_age         ?? 67,
+          life_exp_you:     youProfile?.life_expectancy_age    ?? 88,
+          life_exp_spouse:  spouseProfile?.life_expectancy_age ?? 90,
+          current_age_you:   calcAge(youProfile?.dob),
+          current_age_spouse: calcAge(spouseProfile?.dob),
+          survivor_benefit_pct: youSS?.survivor_benefit_pct ?? 1.0,
+        };
 
         const result = await getSsStrategies(params);
         setStrategies(Array.isArray(result) ? result : result.strategies ?? []);
