@@ -39,6 +39,11 @@ function PersonCard({ person, ss, onPersonChange, onSsChange }) {
         </div>
       </div>
       <div className="field">
+        <label>Pre-Retirement Salary ($/yr)</label>
+        <input type="number" min={0} step={1000} value={person.pre_retirement_income || ''}
+          onChange={(e) => onPersonChange(person.id, { pre_retirement_income: parseFloat(e.target.value) || 0 })} />
+      </div>
+      <div className="field">
         <label>State</label>
         <input type="text" value={person.state || 'DE'} readOnly style={{ opacity: 0.5 }} />
       </div>
@@ -108,10 +113,9 @@ export default function ProfileTab() {
     load();
   }, []);
 
-  const debouncedUpdateProfile = useDebounce(async (id, patch) => {
+  const debouncedUpdateProfile = useDebounce(async (id, fullProfile) => {
     try {
-      const current = profiles.find(p => p.id === id);
-      const updated = await updateProfile(id, { ...current, ...patch });
+      const updated = await updateProfile(id, fullProfile);
       setProfiles(prev => prev.map(p => p.id === id ? { ...p, ...updated } : p));
     } catch (err) { console.error('Profile update failed:', err); }
   }, 500);
@@ -135,8 +139,12 @@ export default function ProfileTab() {
           {profiles.map(person => (
             <PersonCard key={person.id} person={person} ss={ssData[person.id]}
               onPersonChange={(id, patch) => {
-                setProfiles(prev => prev.map(p => p.id === id ? { ...p, ...patch } : p));
-                debouncedUpdateProfile(id, patch);
+                setProfiles(prev => prev.map(p => {
+                  if (p.id !== id) return p;
+                  const merged = { ...p, ...patch };
+                  debouncedUpdateProfile(id, merged);
+                  return merged;
+                }));
               }}
               onSsChange={(profileId, patch) => {
                 setSsData(prev => ({ ...prev, [profileId]: { ...prev[profileId], ...patch } }));
