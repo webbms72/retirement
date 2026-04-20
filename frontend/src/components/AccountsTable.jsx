@@ -4,10 +4,12 @@ import { getAccounts, createAccount, updateAccount, deleteAccount } from '../api
 const TYPE_COLORS = {
   '401k': '#ff9800', roth_ira: '#4fc3f7', brokerage: '#ce93d8',
   hsa: '#81c784', nqdc: '#ffcc02', pension: '#ff6b6b', real_estate: '#a5d6a7',
+  savings: '#80cbc4', other: '#b0bec5',
 };
 const TYPE_LABELS = {
   '401k': '401k', roth_ira: 'Roth IRA', brokerage: 'Brokerage',
   hsa: 'HSA', nqdc: 'NQDC', pension: 'Pension', real_estate: 'Real Estate',
+  savings: 'Savings', other: 'Other',
 };
 const ACCOUNT_TYPES = Object.keys(TYPE_LABELS);
 
