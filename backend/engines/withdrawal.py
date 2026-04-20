@@ -144,20 +144,28 @@ def optimize_withdrawals(wi: WithdrawalInput) -> WithdrawalResult:
     result = WithdrawalResult()
     remaining = wi.required_amount
 
-    accounts_by_type: dict[str, AccountState] = {
-        a.account_type: a for a in wi.account_states
-    }
+    # Group accounts by type — both spouses may have the same type
+    accounts_by_type: dict[str, list[AccountState]] = {}
+    for a in wi.account_states:
+        accounts_by_type.setdefault(a.account_type, []).append(a)
 
     def draw(account_type: str, amount: float) -> float:
-        acct = accounts_by_type.get(account_type)
-        if acct is None or acct.balance <= 0:
-            return 0.0
-        drawn = min(acct.balance, amount)
-        result.withdrawals_by_account[account_type] = (
-            result.withdrawals_by_account.get(account_type, 0.0) + drawn
-        )
-        acct.balance -= drawn
-        return drawn
+        """Draw up to `amount` across all accounts of this type (both spouses)."""
+        accts = accounts_by_type.get(account_type, [])
+        total_drawn = 0.0
+        remaining_to_draw = amount
+        for acct in accts:
+            if acct.balance <= 0 or remaining_to_draw <= 0:
+                continue
+            drawn = min(acct.balance, remaining_to_draw)
+            acct.balance -= drawn
+            total_drawn += drawn
+            remaining_to_draw -= drawn
+        if total_drawn > 0:
+            result.withdrawals_by_account[account_type] = (
+                result.withdrawals_by_account.get(account_type, 0.0) + total_drawn
+            )
+        return total_drawn
 
     # ── Step 0: RMDs ──────────────────────────────────────────────────────────
     if wi.age_you >= RMD_MIN_AGE and wi.prior_year_pretax_balance > 0:
@@ -227,8 +235,9 @@ def optimize_withdrawals(wi: WithdrawalInput) -> WithdrawalResult:
             0.0, wi.target_bracket_ceiling - wi.current_ordinary_taxable_income
         )
         if conversion_room > 0:
-            k401 = accounts_by_type.get("401k")
-            if k401 and k401.balance > 0:
+            k401_list = accounts_by_type.get("401k", [])
+            k401 = next((a for a in k401_list if a.balance > 0), None)
+            if k401:
                 conversion_amount = min(k401.balance, conversion_room)
                 k401.balance -= conversion_amount
                 result.roth_conversion_amount = conversion_amount
@@ -242,12 +251,12 @@ def optimize_withdrawals(wi: WithdrawalInput) -> WithdrawalResult:
         return result
 
     # ── Step 4: 401k ─────────────────────────────────────────────────────────
-    k401_state = accounts_by_type.get("401k")
+    k401_accounts = accounts_by_type.get("401k", [])
     drawn = draw("401k", remaining)
     if drawn > 0:
         remaining -= drawn
         is_pre_59_half = _is_before_59_half(wi.age_you)
-        rule55 = k401_state is not None and k401_state.is_rule_of_55_eligible
+        rule55 = any(a.is_rule_of_55_eligible for a in k401_accounts)
         if is_pre_59_half and not rule55:
             penalty = drawn * 0.10
             result.early_withdrawal_penalty += penalty

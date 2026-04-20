@@ -292,8 +292,13 @@ def project_one_year(
     tax_result: TaxResult = calculate_taxes(ti)
 
     # 12. Assemble ProjectionYear
-    balances = {a.account_type: round(a.balance, 2) for a in accounts}
-    portfolio_balance = sum(balances.values())
+    # Sum balances by account_type (aggregating both spouses' same-type accounts)
+    balances: dict[str, float] = {}
+    for a in accounts:
+        balances[a.account_type] = balances.get(a.account_type, 0.0) + a.balance
+    balances = {k: round(v, 2) for k, v in balances.items()}
+    # Total from all individual accounts (not the deduped dict)
+    portfolio_balance = round(sum(a.balance for a in accounts), 2)
 
     income_by_source = {
         "ss_you": round(ss_you_annual, 2),
