@@ -11,14 +11,15 @@ const DEFAULT_SCENARIO = {
   ss_claim_age_you: 67,
   ss_claim_age_spouse: 67,
   annual_spending: 120000,
-  inflation_rate: 2.5,
-  expected_return_stocks: 7.0,
-  expected_return_bonds: 4.0,
-  stock_allocation: 60,
+  inflation_rate: 0.025,
+  expected_return_stocks: 0.07,
+  expected_return_bonds: 0.04,
+  stock_allocation: 0.60,
   withdrawal_strategy: 'optimized',
-  withdrawal_order: [],
+  manual_withdrawal_order: [],
   roth_conversion_enabled: false,
-  roth_conversion_annual_limit: 50000,
+  roth_conversion_target_bracket: '22%',
+  healthcare_monthly_pre_medicare: 1500,
 };
 
 const WITHDRAWAL_ACCOUNT_TYPES = ['401k', 'roth_ira', 'brokerage', 'hsa', 'nqdc', 'pension'];
@@ -76,12 +77,34 @@ function WithdrawalOrderEditor({ order, onChange }) {
   );
 }
 
+// API stores rates as decimals (0.07); UI works in percentages (7.0).
+function toDisplay(s) {
+  return {
+    ...s,
+    expected_return_stocks: +(s.expected_return_stocks * 100).toFixed(2),
+    expected_return_bonds: +(s.expected_return_bonds * 100).toFixed(2),
+    inflation_rate: +(s.inflation_rate * 100).toFixed(2),
+    stock_allocation: +(s.stock_allocation * 100).toFixed(1),
+    manual_withdrawal_order: s.manual_withdrawal_order || [],
+  };
+}
+
+function toApi(s) {
+  return {
+    ...s,
+    expected_return_stocks: s.expected_return_stocks / 100,
+    expected_return_bonds: s.expected_return_bonds / 100,
+    inflation_rate: s.inflation_rate / 100,
+    stock_allocation: s.stock_allocation / 100,
+  };
+}
+
 function ScenarioEditor({ scenario, profiles, onSave, onRun, onDelete, onDuplicate, running }) {
-  const [local, setLocal] = useState(scenario);
+  const [local, setLocal] = useState(() => toDisplay(scenario));
   const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
-    setLocal(scenario);
+    setLocal(toDisplay(scenario));
     setDirty(false);
   }, [scenario.id]);
 
@@ -91,7 +114,7 @@ function ScenarioEditor({ scenario, profiles, onSave, onRun, onDelete, onDuplica
   }
 
   async function handleSave() {
-    await onSave(local);
+    await onSave(toApi(local));
     setDirty(false);
   }
 
@@ -171,8 +194,8 @@ function ScenarioEditor({ scenario, profiles, onSave, onRun, onDelete, onDuplica
           </div>
           {local.withdrawal_strategy === 'manual' && (
             <WithdrawalOrderEditor
-              order={local.withdrawal_order || []}
-              onChange={order => update({ withdrawal_order: order })}
+              order={local.manual_withdrawal_order || []}
+              onChange={order => update({ manual_withdrawal_order: order })}
             />
           )}
 
