@@ -119,6 +119,12 @@ export default function MonteCarloTab() {
         )}
       </div>
 
+      {selectedScenario && (
+        <h2 style={{ color: '#f1f5f9', fontSize: 18, fontWeight: 700, margin: '0 0 20px 0' }}>
+          {selectedScenario.name}
+        </h2>
+      )}
+
       {/* Sim count selector + Run */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
         <span style={{ color: '#90a4ae', fontSize: 12 }}>Simulations:</span>
