@@ -3,6 +3,9 @@ import { getScenarios, getProjection } from '../api/client.js';
 import PortfolioChart from '../components/PortfolioChart.jsx';
 import IncomeBreakdownChart from '../components/IncomeBreakdownChart.jsx';
 import TaxSummaryPanel from '../components/TaxSummaryPanel.jsx';
+import WithdrawalPlaybook from '../components/WithdrawalPlaybook.jsx';
+import HealthcareCostPanel from '../components/HealthcareCostPanel.jsx';
+import SpendingBreakdownBar from '../components/SpendingBreakdownBar.jsx';
 
 function fmtDollar(v) {
   if (v == null) return '—';
@@ -68,6 +71,20 @@ export default function ResultsTab() {
   const lastRow = rows[rows.length - 1];
   const estateBalance = lastRow?.portfolio_balance ?? null;
 
+  const preMedicareHcCost = rows
+    .filter(r => (r.income_by_source?.healthcare_annual || 0) > 0)
+    .reduce((sum, r) => sum + (r.income_by_source?.healthcare_annual || 0), 0);
+
+  const hasMedicareGap =
+    (selectedScenario?.healthcare_monthly_pre_medicare || 0) > 0 &&
+    (selectedScenario?.retirement_age_you ?? 99) < 65;
+  const medicareStartAge = hasMedicareGap ? 65 : null;
+
+  const hcGapYears = rows.filter(
+    r => r.age_you >= (selectedScenario?.retirement_age_you ?? 99) && r.age_you < 65
+  );
+  const hcStartAge = hcGapYears[0]?.age_you ?? null;
+
   return (
     <div>
       {/* Scenario selector chips */}
@@ -103,10 +120,14 @@ export default function ResultsTab() {
           label="Avg Effective Tax Rate"
           value={avgEffectiveRate != null ? `${(avgEffectiveRate * 100).toFixed(1)}%` : '—'}
         />
-        <MetricCard label="Estate at Life Exp" value={fmtDollar(estateBalance)} />
+        <MetricCard
+          label={hcStartAge != null ? `Pre-Medicare HC Cost · Ages ${hcStartAge}–65` : 'Pre-Medicare HC Cost'}
+          value={preMedicareHcCost > 0 ? fmtDollar(preMedicareHcCost) : '—'}
+          color="#fcd34d"
+        />
       </div>
 
-      {/* Charts + Tax Summary */}
+      {/* Charts + panels */}
       <div className="two-col" style={{ alignItems: 'start' }}>
         <div>
           <div className="card" style={{ marginBottom: 16 }}>
@@ -115,6 +136,7 @@ export default function ResultsTab() {
               data={rows}
               retirementAge={selectedScenario?.retirement_age_you}
               ssStartAge={selectedScenario?.ss_claim_age_you}
+              medicareStartAge={medicareStartAge}
             />
           </div>
           <div className="card">
@@ -123,6 +145,8 @@ export default function ResultsTab() {
           </div>
         </div>
         <div>
+          <HealthcareCostPanel rows={rows} scenario={selectedScenario} />
+          <SpendingBreakdownBar rows={rows} scenario={selectedScenario} />
           <TaxSummaryPanel
             rows={rows}
             retirementAge={selectedScenario?.retirement_age_you}
@@ -130,6 +154,15 @@ export default function ResultsTab() {
           />
         </div>
       </div>
+
+      {/* Withdrawal Playbook */}
+      {rows.length > 0 && selectedScenario && (
+        <WithdrawalPlaybook
+          rows={rows}
+          retirementAge={selectedScenario.retirement_age_you}
+          scenarioName={selectedScenario.name}
+        />
+      )}
     </div>
   );
 }
