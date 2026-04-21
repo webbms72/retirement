@@ -206,13 +206,15 @@ def project_one_year(
         else 0.0
     )
 
-    # 8. RMDs (mandatory)
+    # 8. RMDs (mandatory) — each account uses its owner's age (SECURE 2.0, age 73+)
     rmd_income: dict[str, float] = {}
     for acct in accounts:
         if acct.account_type == "401k":
-            rmd = calculate_rmd(prior_year_balance=acct.balance, age=age_you)
+            owner_age = age_you if acct.owner == "you" else age_spouse
+            rmd = calculate_rmd(prior_year_balance=acct.balance, age=owner_age)
             if rmd > 0:
-                rmd_income[acct.account_type] = rmd
+                key = f"401k_{acct.owner}"
+                rmd_income[key] = rmd_income.get(key, 0.0) + rmd
                 acct.balance = max(0.0, acct.balance - rmd)
 
     total_rmd = sum(rmd_income.values())
@@ -238,7 +240,8 @@ def project_one_year(
         params.filing_status,
         inflation,
     )
-    prior_pretax_balance = sum(a.balance for a in accounts if a.account_type == "401k")
+    # RMDs already taken in step 8 above; pass 0 so the optimizer skips its own Step 0.
+    prior_pretax_balance = 0.0
 
     wi = WithdrawalInput(
         required_amount=discretionary_gap,
@@ -257,9 +260,8 @@ def project_one_year(
     )
     wr: WithdrawalResult = optimize_withdrawals(wi)
 
-    ordinary_from_withdrawals = (
-        wr.withdrawals_by_account.get("401k", 0.0) + wr.roth_conversion_amount
-    )
+    # Roth conversion is passed separately to TaxInput — do not include here.
+    ordinary_from_withdrawals = wr.withdrawals_by_account.get("401k", 0.0)
     ltcg_income = wr.withdrawals_by_account.get("brokerage", 0.0)
 
     total_ordinary = (

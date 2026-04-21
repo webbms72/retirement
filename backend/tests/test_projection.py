@@ -314,3 +314,135 @@ def test_run_projection_ss_increases_portfolio_stability():
     early_age68 = next(r for r in results_early if r.age_you == 68)
     late_age68 = next(r for r in results_late if r.age_you == 68)
     assert early_age68.portfolio_balance > late_age68.portfolio_balance
+
+
+# ── Critical bug regression tests ────────────────────────────────────────────
+
+
+def test_rmd_uses_owner_age_not_your_age():
+    """CRITICAL-1: Spouse's 401k RMD must use spouse's age, not yours."""
+    # You are 73 (triggers RMD), spouse is 68 (below 73 — no RMD).
+    # Spouse's 401k should not be debited for an RMD.
+    params = _make_scenario()
+    blended = 0.65 * 0.07 + 0.35 * 0.04  # ≈ 0.0595
+    your_start = 500_000.0
+    spouse_start = 400_000.0
+
+    accounts = [
+        AccountState(
+            account_type="401k", balance=your_start, basis=0.0, owner="you",
+            is_rule_of_55_eligible=False,
+        ),
+        AccountState(
+            account_type="401k", balance=spouse_start, basis=0.0, owner="spouse",
+            is_rule_of_55_eligible=False,
+        ),
+    ]
+
+    result = project_one_year(
+        year=2045,
+        age_you=73,
+        age_spouse=68,
+        accounts=accounts,
+        params=params,
+        prior_year_magi=0.0,
+        cumulative_inflation=1.0,
+        is_retired_you=True,
+        is_retired_spouse=True,
+        first_death_year=None,
+    )
+
+    # Growth is applied before RMD; your post-growth balance drives the RMD.
+    your_post_growth = your_start * (1.0 + blended)
+    expected_rmd = your_post_growth / 26.5  # divisor for age 73
+
+    rmd_reported = result.income_by_source.get("rmd", 0.0)
+    assert rmd_reported == pytest.approx(expected_rmd, rel=0.01)
+
+    # Spouse's account should only reflect growth — no RMD should have been deducted.
+    spouse_acct = next(a for a in accounts if a.owner == "spouse")
+    spouse_post_growth = spouse_start * (1.0 + blended)
+    # Balance should be near post-growth (any spending withdrawals may reduce further,
+    # but no RMD deduction of ~$16k should have occurred).
+    assert spouse_acct.balance > spouse_post_growth - 100.0
+
+
+def test_rmd_not_double_withdrawn():
+    """CRITICAL-2: 401k balance should only be debited once for RMD per year."""
+    # With a single 401k of $530,000 at age 73, RMD ≈ $530k/26.5 ≈ $20,000.
+    # The withdrawal optimizer must not also draw a second RMD from the same account.
+    params = _make_scenario(annual_spending=0.0)  # no spending gap → optimizer idle
+    accounts = [
+        AccountState(
+            account_type="401k", balance=530_000.0, basis=0.0, owner="you",
+            is_rule_of_55_eligible=False,
+        ),
+    ]
+    start_balance = 530_000.0
+    blended = 0.65 * 0.07 + 0.35 * 0.04  # ≈ 0.0595
+    expected_post_growth = start_balance * (1.0 + blended)
+    expected_rmd = expected_post_growth / 26.5
+    expected_end_balance = expected_post_growth - expected_rmd
+
+    result = project_one_year(
+        year=2045,
+        age_you=73,
+        age_spouse=71,
+        accounts=accounts,
+        params=params,
+        prior_year_magi=0.0,
+        cumulative_inflation=1.0,
+        is_retired_you=True,
+        is_retired_spouse=True,
+        first_death_year=None,
+    )
+
+    assert result.portfolio_balance == pytest.approx(expected_end_balance, rel=0.01)
+
+
+def test_roth_conversion_not_double_taxed():
+    """CRITICAL-3: Roth conversion must not appear in both ordinary_income and roth_conversion.
+
+    The optimizer fires a Roth conversion (Step 3) when there is a spending gap and
+    bracket room.  We verify that gross_income = 401k_withdrawal + conversion,
+    NOT 401k_withdrawal + 2 * conversion as would happen with the double-count bug.
+    """
+    params = _make_scenario(annual_spending=40_000.0)
+    params.healthcare_monthly_pre_medicare = 0.0
+    params.roth_conversion_enabled = True
+    params.roth_conversion_target_bracket = "12%"
+
+    # Empty brokerage/HSA so the optimizer reaches Step 3 (Roth conversion)
+    accounts = [
+        AccountState(
+            account_type="401k", balance=2_000_000.0, basis=0.0, owner="you",
+            is_rule_of_55_eligible=True,
+        ),
+        AccountState(
+            account_type="roth_ira", balance=100_000.0, basis=100_000.0, owner="you"
+        ),
+        AccountState(account_type="brokerage", balance=0.0, basis=0.0, owner="you"),
+        AccountState(account_type="hsa", balance=0.0, basis=0.0, owner="you"),
+    ]
+
+    result = project_one_year(
+        year=2030,
+        age_you=58,
+        age_spouse=56,
+        accounts=accounts,
+        params=params,
+        prior_year_magi=0.0,
+        cumulative_inflation=1.0,
+        is_retired_you=True,
+        is_retired_spouse=True,
+        first_death_year=None,
+    )
+
+    conversion = result.roth_conversion_amount
+    assert conversion > 0, "Expected a Roth conversion to occur"
+
+    k401_withdrawal = result.income_by_source.get("401k_withdrawal", 0.0)
+    # gross_income should be 401k_withdrawal + conversion (single-count).
+    # Before the fix it was 401k_withdrawal + 2 * conversion.
+    expected_gross = k401_withdrawal + conversion
+    assert result.gross_income == pytest.approx(expected_gross, rel=0.001)
