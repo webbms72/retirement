@@ -225,8 +225,10 @@ export default function WithdrawalPlaybook({ rows, retirementAge, scenarioName }
       '}',
     ].join('\n');
     document.head.appendChild(style);
+    window.addEventListener('afterprint', () => {
+      document.head.removeChild(style);
+    }, { once: true });
     window.print();
-    document.head.removeChild(style);
   }
 
   return (
