@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis,
-  CartesianGrid, Tooltip, ReferenceLine, Legend,
+  CartesianGrid, Tooltip, ReferenceLine, ReferenceArea, Legend,
 } from 'recharts';
 
 function fmtDollar(v) {
@@ -25,7 +25,7 @@ function CustomTooltip({ active, payload }) {
   );
 }
 
-export default function PortfolioChart({ data, retirementAge, ssStartAge }) {
+export default function PortfolioChart({ data, retirementAge, ssStartAge, medicareStartAge }) {
   if (!data || data.length === 0) {
     return <div style={{ color: '#90a4ae', textAlign: 'center', padding: 40 }}>No projection data yet.</div>;
   }
@@ -65,6 +65,14 @@ export default function PortfolioChart({ data, retirementAge, ssStartAge }) {
         )}
         <ReferenceLine x={73} stroke="#ce93d8" strokeDasharray="4 3"
           label={{ value: 'RMD', position: 'top', fill: '#ce93d8', fontSize: 10 }} />
+        {retirementAge != null && medicareStartAge != null && retirementAge < medicareStartAge && (
+          <ReferenceArea
+            x1={retirementAge}
+            x2={medicareStartAge}
+            fill="rgba(180, 83, 9, 0.07)"
+            label={{ value: 'HC cost zone', position: 'insideTopLeft', fill: '#b45309', fontSize: 9 }}
+          />
+        )}
       </LineChart>
     </ResponsiveContainer>
   );
