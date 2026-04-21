@@ -68,22 +68,21 @@ export default function ResultsTab() {
     ? taxRows.reduce((sum, r) => sum + (r.effective_rate || 0), 0) / taxRows.length
     : null;
 
-  const lastRow = rows[rows.length - 1];
-  const estateBalance = lastRow?.portfolio_balance ?? null;
-
-  const preMedicareHcCost = rows
-    .filter(r => (r.income_by_source?.healthcare_annual || 0) > 0)
-    .reduce((sum, r) => sum + (r.income_by_source?.healthcare_annual || 0), 0);
-
   const hasMedicareGap =
     (selectedScenario?.healthcare_monthly_pre_medicare || 0) > 0 &&
     (selectedScenario?.retirement_age_you ?? 99) < 65;
   const medicareStartAge = hasMedicareGap ? 65 : null;
 
+  // hcGapYears: retirement rows before Medicare (99 is a no-op sentinel when no scenario selected)
   const hcGapYears = rows.filter(
     r => r.age_you >= (selectedScenario?.retirement_age_you ?? 99) && r.age_you < 65
   );
   const hcStartAge = hcGapYears[0]?.age_you ?? null;
+
+  // Sum HC cost only over the pre-Medicare gap period
+  const preMedicareHcCost = hcGapYears.reduce(
+    (sum, r) => sum + (r.income_by_source?.healthcare_annual || 0), 0
+  );
 
   return (
     <div>
