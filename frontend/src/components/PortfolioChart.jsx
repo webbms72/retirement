@@ -55,6 +55,14 @@ export default function PortfolioChart({ data, retirementAge, ssStartAge, medica
           dot={false}
           name="Portfolio Balance"
         />
+        {retirementAge != null && medicareStartAge != null && retirementAge < medicareStartAge && (
+          <ReferenceArea
+            x1={retirementAge}
+            x2={medicareStartAge}
+            fill="rgba(180, 83, 9, 0.07)"
+            label={{ value: 'HC cost zone', position: 'insideTopLeft', fill: '#b45309', fontSize: 9 }}
+          />
+        )}
         {retirementAge != null && (
           <ReferenceLine x={retirementAge} stroke="#ff9800" strokeDasharray="4 3"
             label={{ value: 'Retire', position: 'top', fill: '#ff9800', fontSize: 10 }} />
@@ -65,14 +73,6 @@ export default function PortfolioChart({ data, retirementAge, ssStartAge, medica
         )}
         <ReferenceLine x={73} stroke="#ce93d8" strokeDasharray="4 3"
           label={{ value: 'RMD', position: 'top', fill: '#ce93d8', fontSize: 10 }} />
-        {retirementAge != null && medicareStartAge != null && retirementAge < medicareStartAge && (
-          <ReferenceArea
-            x1={retirementAge}
-            x2={medicareStartAge}
-            fill="rgba(180, 83, 9, 0.07)"
-            label={{ value: 'HC cost zone', position: 'insideTopLeft', fill: '#b45309', fontSize: 9 }}
-          />
-        )}
       </LineChart>
     </ResponsiveContainer>
   );
