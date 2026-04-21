@@ -331,6 +331,7 @@ def project_one_year(
         "brokerage_withdrawal": round(ltcg_income, 2),
         "hsa_withdrawal": round(wr.withdrawals_by_account.get("hsa", 0.0), 2),
         "roth_conversion": round(wr.roth_conversion_amount, 2),
+        "healthcare_annual": round(healthcare_annual, 2),
     }
 
     return ProjectionYear(

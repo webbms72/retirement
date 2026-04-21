@@ -501,3 +501,61 @@ def test_spouse_de_retirement_exclusion_applied():
     # With the fix, the spouse's RMD (~$15k) is passed as retirement_income_spouse,
     # granting an extra $12,500 DE exclusion → lower state tax.
     assert result.state_tax < tax_without_spouse_exclusion
+
+
+def test_healthcare_annual_in_income_by_source():
+    """healthcare_annual must be present and correct for pre-65 retirement years."""
+    params = ScenarioParams(
+        retirement_age_you=57,
+        retirement_age_spouse=57,
+        annual_spending=60_000.0,
+        spending_glide_path={},
+        ss_claim_age_you=67,
+        ss_claim_age_spouse=67,
+        ss_monthly_you=0.0,
+        ss_monthly_spouse=0.0,
+        withdrawal_strategy="optimized",
+        manual_withdrawal_order=[],
+        roth_conversion_enabled=False,
+        roth_conversion_target_bracket=None,
+        healthcare_monthly_pre_medicare=1_500.0,
+        stock_allocation=0.6,
+        expected_return_stocks=0.07,
+        expected_return_bonds=0.04,
+        inflation_rate=0.025,
+        pension_monthly_you=0.0,
+        pension_start_age_you=0,
+        rental_annual_income=0.0,
+        nqdc_schedule=[],
+        life_expectancy_you=88,
+        life_expectancy_spouse=88,
+        dob_year_you=1969,
+        dob_year_spouse=1969,
+        base_year=2024,
+        filing_status="mfj",
+        state="DE",
+    )
+    accounts = [
+        AccountState(
+            account_type="brokerage",
+            balance=500_000.0,
+            basis=0.0,
+            owner="you",
+            is_rule_of_55_eligible=False,
+            annual_contribution=0.0,
+        )
+    ]
+    result = project_one_year(
+        year=2026,
+        age_you=57,
+        age_spouse=57,
+        accounts=accounts,
+        params=params,
+        prior_year_magi=0.0,
+        cumulative_inflation=1.0,
+        is_retired_you=True,
+        is_retired_spouse=True,
+        first_death_year=None,
+    )
+    assert "healthcare_annual" in result.income_by_source
+    assert result.income_by_source["healthcare_annual"] == pytest.approx(1_500.0 * 12, rel=0.001)
