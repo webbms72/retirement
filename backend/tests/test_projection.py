@@ -602,14 +602,28 @@ def test_roth_conversion_credited_to_roth_ira():
     conversion = result.roth_conversion_amount
     assert conversion > 0, "Expected a Roth conversion to occur"
 
-    # Portfolio balance must equal (opening balances grown by return) minus
-    # net withdrawals — the conversion itself is internal and must not reduce total.
-    blended_return = params.stock_allocation * params.expected_return_stocks + (1 - params.stock_allocation) * params.expected_return_bonds
-    # The Roth IRA balance in balances_by_account must be larger
-    # than the opening balance grown by return (conversion adds to it).
+    blended_return = (
+        params.stock_allocation * params.expected_return_stocks
+        + (1 - params.stock_allocation) * params.expected_return_bonds
+    )
     roth_after = result.balances_by_account.get("roth_ira", 0.0)
     roth_grown = initial_roth * (1 + blended_return)
+
+    # After-tax credit: Roth must be above growth-only (conversion was credited)
+    # but below growth + full conversion (taxes are withheld from the credit).
+    target_bracket_rate = 0.12  # matches params.roth_conversion_target_bracket = "12%"
+    roth_max = roth_grown + conversion  # full credit (no tax — wrong)
+    roth_expected = roth_grown + conversion * (1.0 - target_bracket_rate)
+
     assert roth_after > roth_grown, (
-        f"Roth IRA balance {roth_after:,.0f} should exceed growth-only value "
-        f"{roth_grown:,.0f} — conversion ({conversion:,.0f}) was not credited"
+        f"Roth IRA {roth_after:,.0f} should exceed growth-only {roth_grown:,.0f} "
+        f"— conversion was not credited at all"
+    )
+    assert roth_after < roth_max, (
+        f"Roth IRA {roth_after:,.0f} should be below full (pre-tax) credit {roth_max:,.0f} "
+        f"— tax cost of conversion is not reflected"
+    )
+    assert roth_after == pytest.approx(roth_expected, rel=0.01), (
+        f"Roth IRA {roth_after:,.0f} should be ~{roth_expected:,.0f} "
+        f"(growth + after-tax conversion credit)"
     )
