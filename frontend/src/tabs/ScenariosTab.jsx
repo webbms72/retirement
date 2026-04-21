@@ -311,7 +311,10 @@ export default function ScenariosTab() {
     try {
       const updated = await updateScenario(id, { ...scenario, name: trimmed });
       setScenarios(prev => prev.map(s => s.id === id ? { ...s, name: updated.name } : s));
-    } catch (err) { console.error('Rename failed:', err); }
+    } catch (err) {
+      console.error('Rename failed:', err);
+      setRunStatus({ type: 'error', message: `Rename failed: ${err.message}` });
+    }
     setRenamingId(null);
   }
 
