@@ -356,17 +356,25 @@ def calculate_irmaa_annual(
     prior_year_magi: float,
     filing_status: str,
     num_people: int = 2,
+    inflation_factor: float = 1.0,
 ) -> float:
-    """Calculate annual IRMAA Medicare Part B surcharge (2-year lookback)."""
+    """Calculate annual IRMAA Medicare Part B surcharge (2-year lookback).
+
+    Thresholds are inflation-adjusted from their 2024 base values so that
+    nominal income growth from inflation alone does not trigger higher tiers.
+    """
     tiers = IRMAA_MFJ_TIERS if filing_status == "mfj" else IRMAA_SINGLE_TIERS
-    no_surcharge_threshold = tiers[0][0]
+    no_surcharge_threshold = tiers[0][0] * inflation_factor
 
     if prior_year_magi <= no_surcharge_threshold:
         return 0.0
 
     monthly_per_person = 0.0
     for threshold, surcharge in tiers[1:]:
-        if prior_year_magi <= threshold:
+        inflated_threshold = (
+            threshold * inflation_factor if threshold != float("inf") else float("inf")
+        )
+        if prior_year_magi <= inflated_threshold:
             monthly_per_person = surcharge
             break
     else:
@@ -441,6 +449,7 @@ def calculate_taxes(ti: TaxInput) -> TaxResult:
         prior_year_magi=ti.prior_year_magi,
         filing_status=filing_status,
         num_people=num_people,
+        inflation_factor=inflation,
     )
     result.irmaa_annual = irmaa
 

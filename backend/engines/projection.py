@@ -161,6 +161,15 @@ def project_one_year(
     """Simulate a single year of retirement."""
     inflation = cumulative_inflation
 
+    # Capture pre-growth 401k balances before returns are applied.
+    # IRS RMDs are based on December 31 balance of the prior year, which in
+    # a year-by-year simulation corresponds to the beginning-of-year balance.
+    pretax_pre_growth: dict[str, float] = {
+        f"401k_{acct.owner}": acct.balance
+        for acct in accounts
+        if acct.account_type == "401k"
+    }
+
     # 1. Apply investment returns
     blended = _blended_return(params)
     for acct in accounts:
@@ -206,14 +215,16 @@ def project_one_year(
         else 0.0
     )
 
-    # 8. RMDs (mandatory) — each account uses its owner's age (SECURE 2.0, age 73+)
+    # 8. RMDs (mandatory) — each account uses its owner's age (SECURE 2.0, age 73+).
+    # Use the pre-growth balance captured above; IRS divisors apply to prior-year balance.
     rmd_income: dict[str, float] = {}
     for acct in accounts:
         if acct.account_type == "401k":
             owner_age = age_you if acct.owner == "you" else age_spouse
-            rmd = calculate_rmd(prior_year_balance=acct.balance, age=owner_age)
+            key = f"401k_{acct.owner}"
+            prior_balance = pretax_pre_growth.get(key, acct.balance)
+            rmd = calculate_rmd(prior_year_balance=prior_balance, age=owner_age)
             if rmd > 0:
-                key = f"401k_{acct.owner}"
                 rmd_income[key] = rmd_income.get(key, 0.0) + rmd
                 acct.balance = max(0.0, acct.balance - rmd)
 

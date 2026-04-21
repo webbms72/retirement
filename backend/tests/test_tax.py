@@ -374,6 +374,27 @@ def test_irmaa_tier_3_mfj():
     assert result == pytest.approx(279.50 * 2 * 12, abs=1.0)
 
 
+def test_irmaa_thresholds_inflate_with_factor():
+    """IMPORTANT-4: IRMAA threshold at inflation_factor=2.0 should double.
+
+    $230k MAGI is Tier 1 at 2024 levels (threshold $206k). At 2x inflation
+    the threshold becomes $412k, so $230k should trigger no surcharge.
+    """
+    from backend.engines.tax import calculate_irmaa_annual
+
+    # Without inflation — $230k is in Tier 1
+    baseline = calculate_irmaa_annual(
+        prior_year_magi=230_000.0, filing_status="mfj", inflation_factor=1.0
+    )
+    assert baseline == pytest.approx(69.90 * 2 * 12, abs=1.0)
+
+    # With 2x inflation — $230k is below the inflated $412k threshold
+    inflated = calculate_irmaa_annual(
+        prior_year_magi=230_000.0, filing_status="mfj", inflation_factor=2.0
+    )
+    assert inflated == 0.0
+
+
 # ── calculate_taxes() integration test ───────────────────────────────────────
 
 

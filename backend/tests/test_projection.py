@@ -352,9 +352,9 @@ def test_rmd_uses_owner_age_not_your_age():
         first_death_year=None,
     )
 
-    # Growth is applied before RMD; your post-growth balance drives the RMD.
-    your_post_growth = your_start * (1.0 + blended)
-    expected_rmd = your_post_growth / 26.5  # divisor for age 73
+    # RMD is calculated on the pre-growth (beginning-of-year) balance,
+    # matching the IRS rule that uses the prior December 31 balance.
+    expected_rmd = your_start / 26.5  # divisor for age 73
 
     rmd_reported = result.income_by_source.get("rmd", 0.0)
     assert rmd_reported == pytest.approx(expected_rmd, rel=0.01)
@@ -381,7 +381,8 @@ def test_rmd_not_double_withdrawn():
     start_balance = 530_000.0
     blended = 0.65 * 0.07 + 0.35 * 0.04  # ≈ 0.0595
     expected_post_growth = start_balance * (1.0 + blended)
-    expected_rmd = expected_post_growth / 26.5
+    # RMD uses pre-growth balance (IRS prior Dec 31 balance rule)
+    expected_rmd = start_balance / 26.5
     expected_end_balance = expected_post_growth - expected_rmd
 
     result = project_one_year(
