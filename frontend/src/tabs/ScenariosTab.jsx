@@ -238,6 +238,8 @@ export default function ScenariosTab() {
   const [error, setError] = useState(null);
   const [running, setRunning] = useState(false);
   const [runStatus, setRunStatus] = useState(null);
+  const [renamingId, setRenamingId] = useState(null);
+  const [renameValue, setRenameValue] = useState('');
 
   useEffect(() => {
     async function load() {
@@ -301,6 +303,18 @@ export default function ScenariosTab() {
     }
   }
 
+  async function handleRename(id) {
+    const trimmed = renameValue.trim().slice(0, 60);
+    if (!trimmed) { setRenamingId(null); return; }
+    const scenario = scenarios.find(s => s.id === id);
+    if (!scenario) { setRenamingId(null); return; }
+    try {
+      const updated = await updateScenario(id, { ...scenario, name: trimmed });
+      setScenarios(prev => prev.map(s => s.id === id ? { ...s, name: updated.name } : s));
+    } catch (err) { console.error('Rename failed:', err); }
+    setRenamingId(null);
+  }
+
   if (loading) return <div style={{ color: '#90a4ae' }}>Loading scenarios…</div>;
   if (error) return <div style={{ color: '#ef5350' }}>Error: {error}</div>;
 
@@ -319,17 +333,45 @@ export default function ScenariosTab() {
         )}
         {scenarios.map(s => (
           <div key={s.id}
-            onClick={() => setSelectedId(s.id)}
+            onClick={() => { if (renamingId !== s.id) setSelectedId(s.id); }}
             style={{
-              padding: '10px 14px',
-              marginBottom: 6,
-              borderRadius: 8,
+              padding: '10px 14px', marginBottom: 6, borderRadius: 8,
               border: `1px solid ${selectedId === s.id ? '#4fc3f7' : '#1e3a5f'}`,
               background: selectedId === s.id ? '#0f3460' : '#16213e',
-              cursor: 'pointer',
-              transition: 'border-color 0.15s',
+              cursor: 'pointer', transition: 'border-color 0.15s',
             }}>
-            <div style={{ fontWeight: 600, color: selectedId === s.id ? '#4fc3f7' : '#e0e0e0' }}>{s.name}</div>
+            {renamingId === s.id ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                onClick={e => e.stopPropagation()}>
+                <input
+                  autoFocus
+                  value={renameValue}
+                  maxLength={60}
+                  onChange={e => setRenameValue(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') handleRename(s.id);
+                    if (e.key === 'Escape') setRenamingId(null);
+                  }}
+                  style={{
+                    flex: 1, fontSize: 13, fontWeight: 600,
+                    background: '#0d1b2a', border: '1px solid #4fc3f7',
+                    borderRadius: 4, color: '#e0e0e0', padding: '2px 6px',
+                  }}
+                />
+                <button onClick={() => handleRename(s.id)}
+                  style={{ background: 'transparent', border: 'none', color: '#22c55e', cursor: 'pointer', fontSize: 14, padding: '0 2px' }}>✓</button>
+                <button onClick={() => setRenamingId(null)}
+                  style={{ background: 'transparent', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: 14, padding: '0 2px' }}>✕</button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ flex: 1, fontWeight: 600, color: selectedId === s.id ? '#4fc3f7' : '#e0e0e0', fontSize: 13 }}>{s.name}</div>
+                <button
+                  title="Rename"
+                  onClick={e => { e.stopPropagation(); setRenameValue(s.name); setRenamingId(s.id); }}
+                  style={{ background: 'transparent', border: 'none', color: '#475569', cursor: 'pointer', fontSize: 12, padding: '0 2px' }}>✏️</button>
+              </div>
+            )}
             <div style={{ fontSize: 11, color: '#90a4ae', marginTop: 2 }}>
               Retire {s.retirement_age_you} · SS {s.ss_claim_age_you} · ${(s.annual_spending / 1000).toFixed(0)}k/yr
             </div>
