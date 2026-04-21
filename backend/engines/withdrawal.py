@@ -117,6 +117,9 @@ def is_roth_conversion_accessible(
 
 
 def _is_before_59_half(age: int) -> bool:
+    # Annual-granularity simplification: age 59 is treated as fully before 59½
+    # and age 60+ as fully after. This may slightly over-penalise someone who
+    # turns 59½ early in the year, but the error is at most one year's penalty.
     return age < 60
 
 

@@ -447,3 +447,57 @@ def test_roth_conversion_not_double_taxed():
     # Before the fix it was 401k_withdrawal + 2 * conversion.
     expected_gross = k401_withdrawal + conversion
     assert result.gross_income == pytest.approx(expected_gross, rel=0.001)
+
+
+def test_spouse_de_retirement_exclusion_applied():
+    """MINOR-3: Spouse's RMD must flow into retirement_income_spouse for the DE exclusion.
+
+    Both spouses are 73+, so each has an RMD.  We run the projection and compare
+    the resulting state_tax against what Delaware would charge if the spouse's
+    $12,500 exclusion were missing (old hardcoded retirement_income_spouse=0 bug).
+    The projection result must be lower.
+    """
+    from backend.engines.tax import calculate_delaware_tax
+
+    params = _make_scenario(annual_spending=0.0)
+    params.healthcare_monthly_pre_medicare = 0.0
+
+    accounts = [
+        AccountState(
+            account_type="401k", balance=500_000.0, basis=0.0, owner="you",
+            is_rule_of_55_eligible=False,
+        ),
+        AccountState(
+            account_type="401k", balance=400_000.0, basis=0.0, owner="spouse",
+            is_rule_of_55_eligible=False,
+        ),
+    ]
+    result = project_one_year(
+        year=2045,
+        age_you=74,
+        age_spouse=73,
+        accounts=accounts,
+        params=params,
+        prior_year_magi=0.0,
+        cumulative_inflation=1.0,
+        is_retired_you=True,
+        is_retired_spouse=True,
+        first_death_year=None,
+    )
+
+    # Recompute DE tax as it would have been with the old bug (retirement_income_spouse=0).
+    # The ordinary income is the same; only the exclusion differs.
+    total_ordinary = result.income_by_source.get("rmd", 0.0)
+    tax_without_spouse_exclusion = calculate_delaware_tax(
+        de_taxable_income=total_ordinary,
+        filing_status="mfj",
+        num_people=2,
+        age_you=74,
+        age_spouse=73,
+        retirement_income_you=total_ordinary,  # conservative: all income is yours
+        retirement_income_spouse=0.0,          # old hardcoded value
+    )
+
+    # With the fix, the spouse's RMD (~$15k) is passed as retirement_income_spouse,
+    # granting an extra $12,500 DE exclusion → lower state tax.
+    assert result.state_tax < tax_without_spouse_exclusion

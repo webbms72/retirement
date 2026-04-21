@@ -93,6 +93,8 @@ def _get_spending(
 
 
 def _get_nqdc_payout(year: int, params: ScenarioParams) -> float:
+    # NQDC schedules are user-entered in nominal dollars (the plan specifies a
+    # fixed payout amount), so no inflation adjustment is applied here.
     total = 0.0
     for entry in params.nqdc_schedule:
         entry_year = int(entry["date"][:4])
@@ -286,6 +288,10 @@ def project_one_year(
     retirement_income_you = (
         pension_annual + total_rmd + wr.withdrawals_by_account.get("401k", 0.0)
     )
+    # Spouse's qualifying DE retirement income: their own RMD.
+    # Discretionary 401k withdrawals are pooled by the optimizer and can't be
+    # split per owner, so only the attributable RMD portion is tracked here.
+    retirement_income_spouse = rmd_income.get("401k_spouse", 0.0)
 
     # 11. Tax Engine
     ti = TaxInput(
@@ -298,7 +304,7 @@ def project_one_year(
         ltcg_income=ltcg_income,
         roth_conversion=wr.roth_conversion_amount,
         retirement_income_you=retirement_income_you,
-        retirement_income_spouse=0.0,
+        retirement_income_spouse=retirement_income_spouse,
         prior_year_magi=prior_year_magi,
         inflation_factor=inflation,
     )
