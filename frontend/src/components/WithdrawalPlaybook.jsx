@@ -23,7 +23,7 @@ function buildPlaybookSteps(yearData) {
   const notes = yearData.withdrawal_notes || [];
   const steps = [];
 
-  if (yearData.age_you < 65 && src.healthcare_annual > 0) {
+  if (src.healthcare_annual > 0) {
     steps.push({
       type: 'healthcare',
       amount: src.healthcare_annual,

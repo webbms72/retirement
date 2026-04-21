@@ -73,9 +73,10 @@ export default function ResultsTab() {
     (selectedScenario?.retirement_age_you ?? 99) < 65;
   const medicareStartAge = hasMedicareGap ? 65 : null;
 
-  // hcGapYears: retirement rows before Medicare (99 is a no-op sentinel when no scenario selected)
+  // hcGapYears: use healthcare_annual > 0 as truth source — backend correctly handles spouse Medicare age
   const hcGapYears = rows.filter(
-    r => r.age_you >= (selectedScenario?.retirement_age_you ?? 99) && r.age_you < 65
+    r => r.age_you >= (selectedScenario?.retirement_age_you ?? 99) &&
+         (r.income_by_source?.healthcare_annual || 0) > 0
   );
   const hcStartAge = hcGapYears[0]?.age_you ?? null;
 
