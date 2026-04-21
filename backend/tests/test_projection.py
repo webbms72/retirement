@@ -559,3 +559,57 @@ def test_healthcare_annual_in_income_by_source():
     )
     assert "healthcare_annual" in result.income_by_source
     assert result.income_by_source["healthcare_annual"] == pytest.approx(1_500.0 * 12, rel=0.001)
+
+
+def test_roth_conversion_credited_to_roth_ira():
+    """Roth conversion must increase the Roth IRA balance, not vanish from portfolio.
+
+    Before the fix, the optimizer debited the 401k for the conversion but never
+    credited the Roth IRA.  The converted amount disappeared from portfolio_balance
+    each year, causing an artificial early portfolio peak.
+    """
+    params = _make_scenario(annual_spending=60_000.0)
+    params.roth_conversion_enabled = True
+    params.roth_conversion_target_bracket = "12%"
+    params.healthcare_monthly_pre_medicare = 0.0
+
+    initial_401k = 1_000_000.0
+    initial_roth = 200_000.0
+
+    accounts = [
+        AccountState(
+            account_type="401k", balance=initial_401k, basis=0.0, owner="you",
+            is_rule_of_55_eligible=True,
+        ),
+        AccountState(
+            account_type="roth_ira", balance=initial_roth, basis=initial_roth, owner="you"
+        ),
+    ]
+
+    result = project_one_year(
+        year=2030,
+        age_you=58,
+        age_spouse=56,
+        accounts=accounts,
+        params=params,
+        prior_year_magi=0.0,
+        cumulative_inflation=1.0,
+        is_retired_you=True,
+        is_retired_spouse=True,
+        first_death_year=None,
+    )
+
+    conversion = result.roth_conversion_amount
+    assert conversion > 0, "Expected a Roth conversion to occur"
+
+    # Portfolio balance must equal (opening balances grown by return) minus
+    # net withdrawals — the conversion itself is internal and must not reduce total.
+    blended_return = params.stock_allocation * params.expected_return_stocks + (1 - params.stock_allocation) * params.expected_return_bonds
+    # The Roth IRA balance in balances_by_account must be larger
+    # than the opening balance grown by return (conversion adds to it).
+    roth_after = result.balances_by_account.get("roth_ira", 0.0)
+    roth_grown = initial_roth * (1 + blended_return)
+    assert roth_after > roth_grown, (
+        f"Roth IRA balance {roth_after:,.0f} should exceed growth-only value "
+        f"{roth_grown:,.0f} — conversion ({conversion:,.0f}) was not credited"
+    )

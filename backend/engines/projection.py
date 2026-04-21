@@ -273,6 +273,24 @@ def project_one_year(
     )
     wr: WithdrawalResult = optimize_withdrawals(wi)
 
+    # Credit Roth conversion to Roth IRA — the optimizer debits the 401k but
+    # does not credit the destination account.  Without this, the converted
+    # amount vanishes from the portfolio balance each year.
+    if wr.roth_conversion_amount > 0:
+        roth_accounts = [a for a in accounts if a.account_type == "roth_ira"]
+        if roth_accounts:
+            # Credit to the primary owner's Roth IRA; fall back to any Roth IRA.
+            target = next(
+                (a for a in roth_accounts if a.owner == "you"), roth_accounts[0]
+            )
+            target.balance += wr.roth_conversion_amount
+        else:
+            # No Roth IRA account exists yet — create one so the balance is tracked.
+            accounts.append(
+                AccountState(account_type="roth_ira", balance=wr.roth_conversion_amount,
+                             basis=wr.roth_conversion_amount, owner="you")
+            )
+
     # Roth conversion is passed separately to TaxInput — do not include here.
     ordinary_from_withdrawals = wr.withdrawals_by_account.get("401k", 0.0)
     ltcg_income = wr.withdrawals_by_account.get("brokerage", 0.0)
